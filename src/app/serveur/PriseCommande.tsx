@@ -11,7 +11,7 @@ type Commande = {
   id: number;
   table: string;
   statut: string;
-  serveurId: number;
+  serveur: string;
   total: number;
   lignes: string[];
 };
@@ -19,15 +19,14 @@ type Commande = {
 const TABLES = Array.from({ length: 20 }, (_, i) => String(i + 1));
 
 export function PriseCommande({
-  serveurs,
   produits,
   commandes,
+  voirTout,
 }: {
-  serveurs: { id: number; nom: string }[];
   produits: Produit[];
   commandes: Commande[];
+  voirTout: boolean; // gérant : voit les commandes de tous les serveurs
 }) {
-  const [serveurId, setServeurId] = useState<number>(serveurs[0]?.id ?? 0);
   const [table, setTable] = useState("");
   const [panier, setPanier] = useState<Record<number, number>>({});
   const [erreur, setErreur] = useState<string | null>(null);
@@ -50,7 +49,6 @@ export function PriseCommande({
       setErreur(null);
       try {
         const res = await creerCommande(
-          serveurId,
           table,
           Object.entries(panier).map(([produitId, quantite]) => ({ produitId: Number(produitId), quantite })),
         );
@@ -62,22 +60,8 @@ export function PriseCommande({
       }
     });
 
-  const mesCommandes = commandes.filter((c) => c.serveurId === serveurId);
-
   return (
     <div className="tactile">
-      <div className="choix">
-        {serveurs.map((s) => (
-          <button
-            key={s.id}
-            className={s.id === serveurId ? "puce actif" : "puce"}
-            onClick={() => setServeurId(s.id)}
-          >
-            {s.nom}
-          </button>
-        ))}
-      </div>
-
       <div className="caisse">
         <div>
           <div className="choix">
@@ -150,14 +134,15 @@ export function PriseCommande({
         </aside>
       </div>
 
-      <h2>Mes commandes en cours</h2>
+      <h2>{voirTout ? "Commandes en cours" : "Mes commandes en cours"}</h2>
       <div className="grille">
-        {mesCommandes.map((c) => (
+        {commandes.map((c) => (
           <div key={c.id} className="carte">
             <div className="ligne">
               <strong>Table {c.table}</strong>
               <span className="badge">{STATUTS[c.statut as Statut]}</span>
             </div>
+            {voirTout && <div className="muted">{c.serveur}</div>}
             <ul>{c.lignes.map((l, i) => <li key={i}>{l}</li>)}</ul>
             <div className="ligne">
               <span>{c.total.toFixed(2)} DH</span>
@@ -169,7 +154,7 @@ export function PriseCommande({
             </div>
           </div>
         ))}
-        {mesCommandes.length === 0 && <p className="muted">Aucune commande en cours.</p>}
+        {commandes.length === 0 && <p className="muted">Aucune commande en cours.</p>}
       </div>
     </div>
   );

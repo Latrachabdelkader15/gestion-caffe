@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { exigerRole } from "@/lib/session";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { STATUTS, type Statut } from "@/lib/statuts";
 
@@ -25,6 +26,7 @@ export default async function TableauDeBord({
 }: {
   searchParams: Promise<{ periode?: string }>;
 }) {
+  await exigerRole("GERANT");
   const { periode: p } = await searchParams;
   const periode: Periode = p && p in PERIODES ? (p as Periode) : "jour";
   const { jours } = PERIODES[periode];

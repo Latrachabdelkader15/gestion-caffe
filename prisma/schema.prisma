@@ -16,18 +16,32 @@ enum Role {
 }
 
 model Employe {
-  id        Int      @id @default(autoincrement())
-  nom       String
-  pin       String   @unique // code de connexion à 4 chiffres
-  role      Role
-  telephone String?
-  actif     Boolean  @default(true)
-  creeLe    DateTime @default(now())
+  id         Int      @id @default(autoincrement())
+  nom        String
+  // Mot de passe (ou code PIN) haché avec scrypt. Jamais stocké en clair.
+  // null = pas encore défini : l'employé ne peut pas se connecter.
+  motDePasse String?
+  role       Role
+  telephone  String?
+  actif      Boolean  @default(true)
+  creeLe     DateTime @default(now())
 
   commandesPrises    Commande[]       @relation("CommandeServeur")
   commandesPreparees Commande[]       @relation("CommandeBarman")
   mouvements         MouvementStock[]
   livraisons         Livraison[]
+  sessions           Session[]
+}
+
+// Connexion ouverte sur une tablette / un téléphone (cookie « session »)
+model Session {
+  id        String   @id // empreinte SHA-256 du jeton du cookie (le jeton lui-même n'est pas stocké)
+  employe   Employe  @relation(fields: [employeId], references: [id], onDelete: Cascade)
+  employeId Int
+  creeLe    DateTime @default(now())
+  expireLe  DateTime
+
+  @@index([employeId])
 }
 
 // ─────────────────────────── Menu ───────────────────────────

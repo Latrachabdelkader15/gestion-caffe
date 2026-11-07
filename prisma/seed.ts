@@ -1,9 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { enregistrerLivraison } from "../src/lib/stock";
+import { hacher } from "../src/lib/motdepasse";
 
 const db = new PrismaClient();
 
 async function main() {
+  await db.session.deleteMany();
   await db.mouvementStock.deleteMany();
   await db.ligneLivraison.deleteMany();
   await db.livraison.deleteMany();
@@ -19,12 +21,13 @@ async function main() {
   const laiterie = await db.fournisseur.create({ data: { nom: "Laiterie du quartier", telephone: "0600000002" } });
   const souk = await db.fournisseur.create({ data: { nom: "Marché de gros" } });
 
+  // Mots de passe de démonstration : à changer dans « Employés » avant d'ouvrir le café
   await db.employe.createMany({
     data: [
-      { nom: "Gérant", pin: "0000", role: "GERANT" },
-      { nom: "Youssef", pin: "1111", role: "SERVEUR" },
-      { nom: "Sara", pin: "2222", role: "SERVEUR" },
-      { nom: "Karim", pin: "3333", role: "BARMAN" },
+      { nom: "Gérant", motDePasse: hacher("0000"), role: "GERANT" },
+      { nom: "Youssef", motDePasse: hacher("1111"), role: "SERVEUR" },
+      { nom: "Sara", motDePasse: hacher("2222"), role: "SERVEUR" },
+      { nom: "Karim", motDePasse: hacher("3333"), role: "BARMAN" },
     ],
   });
 

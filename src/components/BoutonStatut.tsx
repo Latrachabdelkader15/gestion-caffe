@@ -9,20 +9,18 @@ export function BoutonStatut({
   vers,
   libelle,
   secondaire,
-  barmanId,
 }: {
   commandeId: number;
   vers: Statut;
   libelle: string;
   secondaire?: boolean;
-  barmanId?: number;
 }) {
   const [enCours, start] = useTransition();
   return (
     <button
       className={secondaire ? "secondaire" : undefined}
       disabled={enCours}
-      onClick={() => start(() => changerStatut(commandeId, vers, barmanId))}
+      onClick={() => start(() => changerStatut(commandeId, vers))}
     >
       {libelle}
     </button>
