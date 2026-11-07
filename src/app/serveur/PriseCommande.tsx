@@ -5,7 +5,8 @@ import { creerCommande } from "@/app/actions";
 import { BoutonStatut } from "@/components/BoutonStatut";
 import { STATUTS, type Statut } from "@/lib/statuts";
 
-type Produit = { id: number; nom: string; categorie: string; prix: number };
+// disponible : nombre maximum d'unités réalisables avec le stock actuel (null = pas de recette)
+type Produit = { id: number; nom: string; categorie: string; prix: number; disponible: number | null };
 type Commande = {
   id: number;
   table: string;
@@ -39,11 +40,12 @@ export function PriseCommande({
     start(async () => {
       setErreur(null);
       try {
-        await creerCommande(
+        const res = await creerCommande(
           serveurId,
           table,
           Object.entries(panier).map(([produitId, quantite]) => ({ produitId: Number(produitId), quantite })),
         );
+        if (!res.ok) return setErreur(res.erreur);
         setPanier({});
         setTable("");
       } catch (e) {
@@ -78,11 +80,20 @@ export function PriseCommande({
                 <div>
                   <strong>{p.nom}</strong>
                   <div className="muted">{p.prix.toFixed(2)} DH</div>
+                  {p.disponible === 0 && <span className="alerte">Épuisé</span>}
+                  {p.disponible !== null && p.disponible > 0 && p.disponible <= 5 && (
+                    <span className="alerte">Plus que {p.disponible}</span>
+                  )}
                 </div>
                 <div className="ligne">
                   <button className="secondaire" onClick={() => ajouter(p.id, -1)}>−</button>
                   <span>{panier[p.id] ?? 0}</span>
-                  <button onClick={() => ajouter(p.id, 1)}>+</button>
+                  <button
+                    disabled={p.disponible !== null && (panier[p.id] ?? 0) >= p.disponible}
+                    onClick={() => ajouter(p.id, 1)}
+                  >
+                    +
+                  </button>
                 </div>
               </div>
             ))}
