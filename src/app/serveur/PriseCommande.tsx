@@ -15,6 +15,8 @@ type Commande = {
   lignes: string[];
 };
 
+const TABLES = Array.from({ length: 20 }, (_, i) => String(i + 1));
+
 export function PriseCommande({
   serveurs,
   produits,
@@ -31,7 +33,11 @@ export function PriseCommande({
   const [enCours, start] = useTransition();
 
   const categories = useMemo(() => [...new Set(produits.map((p) => p.categorie))], [produits]);
-  const total = produits.reduce((s, p) => s + (panier[p.id] ?? 0) * p.prix, 0);
+  const [categorie, setCategorie] = useState<string>("TOUT");
+  const visibles = categorie === "TOUT" ? produits : produits.filter((p) => p.categorie === categorie);
+
+  const lignes = produits.filter((p) => (panier[p.id] ?? 0) > 0);
+  const total = lignes.reduce((s, p) => s + panier[p.id] * p.prix, 0);
   const ajouter = (id: number, n: number) =>
     setPanier((p) => ({ ...p, [id]: Math.max(0, (p[id] ?? 0) + n) }));
 
@@ -54,47 +60,86 @@ export function PriseCommande({
   const mesCommandes = commandes.filter((c) => c.serveurId === serveurId);
 
   return (
-    <>
-      <div className="ligne" style={{ justifyContent: "flex-start", marginBottom: "1rem" }}>
-        <label>
-          Serveur{" "}
-          <select value={serveurId} onChange={(e) => setServeurId(Number(e.target.value))}>
-            {serveurs.map((s) => (
-              <option key={s.id} value={s.id}>{s.nom}</option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Table <input value={table} onChange={(e) => setTable(e.target.value)} size={4} />
-        </label>
+    <div className="tactile">
+      <div className="choix">
+        {serveurs.map((s) => (
+          <button
+            key={s.id}
+            className={s.id === serveurId ? "puce actif" : "puce"}
+            onClick={() => setServeurId(s.id)}
+          >
+            {s.nom}
+          </button>
+        ))}
       </div>
 
-      {categories.map((cat) => (
-        <section key={cat}>
-          <h3>{cat}</h3>
-          <div className="grille">
-            {produits.filter((p) => p.categorie === cat).map((p) => (
-              <div key={p.id} className="carte ligne">
-                <div>
-                  <strong>{p.nom}</strong>
-                  <div className="muted">{p.prix.toFixed(2)} DH</div>
-                </div>
-                <div className="ligne">
-                  <button className="secondaire" onClick={() => ajouter(p.id, -1)}>−</button>
-                  <span>{panier[p.id] ?? 0}</span>
-                  <button onClick={() => ajouter(p.id, 1)}>+</button>
-                </div>
-              </div>
+      <div className="caisse">
+        <div>
+          <div className="choix">
+            <button className={categorie === "TOUT" ? "puce actif" : "puce"} onClick={() => setCategorie("TOUT")}>
+              Tout
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={categorie === cat ? "puce actif" : "puce"}
+                onClick={() => setCategorie(cat)}
+              >
+                {cat}
+              </button>
             ))}
           </div>
-        </section>
-      ))}
 
-      <div className="carte ligne" style={{ marginTop: "1rem" }}>
-        <strong>Total : {total.toFixed(2)} DH</strong>
-        <button disabled={enCours || total === 0} onClick={envoyer}>Envoyer au bar</button>
+          <div className="tuiles">
+            {visibles.map((p) => (
+              <button key={p.id} className="tuile" onClick={() => ajouter(p.id, 1)}>
+                {(panier[p.id] ?? 0) > 0 && <span className="pastille">{panier[p.id]}</span>}
+                <span className="tuile-nom">{p.nom}</span>
+                <span className="tuile-prix">{p.prix.toFixed(2)} DH</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <aside className="ticket carte">
+          <div className="muted">Table</div>
+          <div className="tables">
+            {TABLES.map((t) => (
+              <button key={t} className={t === table ? "puce actif" : "puce"} onClick={() => setTable(t)}>
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="ticket-lignes">
+            {lignes.map((p) => (
+              <div key={p.id} className="ligne ticket-ligne">
+                <span>{p.nom}</span>
+                <span className="ligne">
+                  <button className="rond secondaire" onClick={() => ajouter(p.id, -1)} aria-label="Retirer">−</button>
+                  <strong style={{ minWidth: "1.5rem", textAlign: "center" }}>{panier[p.id]}</strong>
+                  <button className="rond" onClick={() => ajouter(p.id, 1)} aria-label="Ajouter">+</button>
+                </span>
+              </div>
+            ))}
+            {lignes.length === 0 && <p className="muted">Touchez un produit pour l'ajouter.</p>}
+          </div>
+
+          <div className="ligne" style={{ fontSize: "1.3rem" }}>
+            <strong>Total</strong>
+            <strong>{total.toFixed(2)} DH</strong>
+          </div>
+          {erreur && <p className="alerte">{erreur}</p>}
+          <div className="ligne">
+            <button className="grand secondaire" disabled={enCours || lignes.length === 0} onClick={() => setPanier({})}>
+              Vider
+            </button>
+            <button className="grand" disabled={enCours || lignes.length === 0 || !table} onClick={envoyer}>
+              {table ? `Envoyer (table ${table})` : "Choisir la table"}
+            </button>
+          </div>
+        </aside>
       </div>
-      {erreur && <p className="alerte">{erreur}</p>}
 
       <h2>Mes commandes en cours</h2>
       <div className="grille">
@@ -117,6 +162,6 @@ export function PriseCommande({
         ))}
         {mesCommandes.length === 0 && <p className="muted">Aucune commande en cours.</p>}
       </div>
-    </>
+    </div>
   );
 }
