@@ -33,7 +33,7 @@ export default async function TableauDeBord({
   debut.setHours(0, 0, 0, 0);
   debut.setDate(debut.getDate() - (jours - 1));
 
-  const [payees, annulees, enCours, ingredients] = await Promise.all([
+  const [payees, annulees, enCours, ingredients, catalogue] = await Promise.all([
     db.commande.findMany({
       where: { statut: "PAYEE", creeLe: { gte: debut } },
       include: { serveur: true, lignes: { include: { produit: true } } },
@@ -45,6 +45,11 @@ export default async function TableauDeBord({
       orderBy: { creeLe: "asc" },
     }),
     db.ingredient.findMany({ orderBy: { nom: "asc" } }),
+    db.produit.findMany({
+      where: { actif: true },
+      include: { recette: { include: { ingredient: true } } },
+      orderBy: [{ categorie: "asc" }, { nom: "asc" }],
+    }),
   ]);
 
   // Chiffres globaux
@@ -63,17 +68,29 @@ export default async function TableauDeBord({
   }
   const serveurs = [...parServeur].sort((a, b) => b[1].ca - a[1].ca);
 
-  // Produits les plus vendus
-  const parProduit = new Map<string, { quantite: number; ca: number }>();
+  // Tous les produits : ventes sur la période et portions possibles avec le stock actuel
+  const parProduit = new Map<number, { quantite: number; ca: number }>();
   for (const c of payees) {
     for (const l of c.lignes) {
-      const v = parProduit.get(l.produit.nom) ?? { quantite: 0, ca: 0 };
+      const v = parProduit.get(l.produitId) ?? { quantite: 0, ca: 0 };
       v.quantite += l.quantite;
       v.ca += l.quantite * l.prixUnit;
-      parProduit.set(l.produit.nom, v);
+      parProduit.set(l.produitId, v);
     }
   }
-  const produits = [...parProduit].sort((a, b) => b[1].quantite - a[1].quantite).slice(0, 10);
+  const produits = catalogue
+    .map((pr) => {
+      const v = parProduit.get(pr.id) ?? { quantite: 0, ca: 0 };
+      // Nombre d'unités réalisables : limité par l'ingrédient le plus juste
+      const possibles = pr.recette.length
+        ? Math.max(0, Math.floor(Math.min(...pr.recette.map((r) => r.ingredient.quantite / r.quantite))))
+        : null;
+      const manque = pr.recette
+        .filter((r) => r.ingredient.quantite <= r.ingredient.seuil)
+        .map((r) => r.ingredient.nom);
+      return { ...pr, vendus: v.quantite, montant: v.ca, possibles, manque };
+    })
+    .sort((a, b) => b.vendus - a.vendus || a.nom.localeCompare(b.nom));
 
   // Évolution : par heure pour la journée, par jour sinon
   let barres: { libelle: string; valeur: number }[];
@@ -187,27 +204,46 @@ export default async function TableauDeBord({
           </table>
         </section>
 
-        <section>
-          <h2>Produits les plus vendus</h2>
-          <table>
-            <thead>
-              <tr><th>Produit</th><th>Quantité</th><th>Montant</th></tr>
-            </thead>
-            <tbody>
-              {produits.map(([nom, v]) => (
-                <tr key={nom}>
-                  <td>{nom}</td>
-                  <td>{v.quantite}</td>
-                  <td>{dh(v.ca)}</td>
-                </tr>
-              ))}
-              {produits.length === 0 && (
-                <tr><td colSpan={3} className="muted">Aucune vente sur la période</td></tr>
-              )}
-            </tbody>
-          </table>
-        </section>
       </div>
+
+      <h2>Produits</h2>
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>Produit</th><th>Catégorie</th><th>Prix</th><th>Vendus</th><th>Montant</th>
+              <th>Encore possible</th>
+            </tr>
+          </thead>
+          <tbody>
+            {produits.map((pr) => (
+              <tr key={pr.id}>
+                <td>{pr.nom}</td>
+                <td className="muted">{pr.categorie}</td>
+                <td>{dh(pr.prix)}</td>
+                <td>{pr.vendus}</td>
+                <td>{dh(pr.montant)}</td>
+                <td>
+                  {pr.possibles === null ? (
+                    <span className="muted">pas de recette</span>
+                  ) : (
+                    <span className={pr.possibles === 0 || pr.manque.length ? "alerte" : undefined}>
+                      {pr.possibles}
+                    </span>
+                  )}
+                  {pr.manque.length > 0 && (
+                    <span className="muted"> · bas : {pr.manque.join(", ")}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {produits.length === 0 && (
+              <tr><td colSpan={6} className="muted">Aucun produit au menu</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted">« Encore possible » : nombre de produits qu'on peut encore préparer avec le stock actuel.</p>
 
       <div className="deux-colonnes">
         <section>

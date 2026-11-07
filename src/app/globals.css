@@ -39,3 +39,27 @@ th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--borde
 .histo-barre { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 1px; }
 .histo-valeur { font-size: 0.7rem; color: var(--muted); }
 .histo-libelle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+
+/* Écran tactile : grandes zones à toucher, pas de survol, pas de zoom au double appui */
+button, a, select, input { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button { min-height: 44px; }
+.tactile { user-select: none; }
+.choix { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.puce { background: var(--card); color: var(--accent); border: 2px solid var(--accent); border-radius: 12px; min-height: 52px; min-width: 52px; padding: 0.5rem 1rem; font-size: 1.1rem; font-weight: 600; }
+.puce.actif { background: var(--accent); color: #fff; }
+.caisse { display: grid; gap: 1rem; grid-template-columns: 1fr 340px; align-items: start; }
+@media (max-width: 800px) { .caisse { grid-template-columns: 1fr; } }
+.tuiles { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+.tuile { position: relative; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; gap: 0.5rem; min-height: 110px; padding: 0.9rem; background: var(--card); color: var(--text); border: 2px solid var(--border); border-radius: 14px; text-align: left; }
+.tuile:active { background: var(--border); transform: scale(0.97); }
+.tuile-nom { font-size: 1.15rem; font-weight: 700; }
+.tuile-prix { color: var(--muted); }
+.pastille { position: absolute; top: 8px; right: 8px; background: var(--accent); color: #fff; border-radius: 99px; min-width: 2rem; height: 2rem; display: grid; place-items: center; font-weight: 700; }
+.ticket { position: sticky; top: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.tables { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.4rem; }
+.tables .puce { padding: 0.4rem 0; min-width: 0; }
+.ticket-lignes { display: flex; flex-direction: column; gap: 0.4rem; max-height: 40vh; overflow-y: auto; }
+.ticket-ligne { border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; font-size: 1.05rem; }
+button.rond { width: 48px; height: 48px; padding: 0; border-radius: 50%; font-size: 1.5rem; }
+button.grand { flex: 1; min-height: 64px; font-size: 1.2rem; font-weight: 700; border-radius: 12px; }
+button:active:not(:disabled) { filter: brightness(0.9); }
