@@ -27,3 +27,15 @@ table { width: 100%; border-collapse: collapse; background: var(--card); }
 th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid var(--border); }
 .badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 99px; background: var(--border); font-size: 0.8rem; }
 .ligne { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+
+/* Tableau de bord */
+.onglets { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.onglet { padding: 0.35rem 0.8rem; border: 1px solid var(--accent); border-radius: 99px; color: var(--accent); text-decoration: none; font-size: 0.9rem; }
+.onglet.actif { background: var(--accent); color: #fff; }
+.chiffre { font-size: 1.6rem; font-weight: 700; margin-top: 0.25rem; }
+.deux-colonnes { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.histo { display: flex; align-items: flex-end; gap: 4px; height: 180px; overflow-x: auto; }
+.histo-col { flex: 1 0 28px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; }
+.histo-barre { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 1px; }
+.histo-valeur { font-size: 0.7rem; color: var(--muted); }
+.histo-libelle { font-size: 0.7rem; color: var(--muted); margin-top: 2px; white-space: nowrap; }

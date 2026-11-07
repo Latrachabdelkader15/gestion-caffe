@@ -42,6 +42,10 @@ export default async function Accueil() {
             {bas.length ? `${bas.length} ingrédient(s) en stock bas` : "Stock correct"}
           </p>
         </Link>
+        <Link href="/tableau-de-bord" className="carte">
+          <h3>Tableau de bord</h3>
+          <p className="muted">Ventes, serveurs, produits, stock</p>
+        </Link>
       </div>
 
       <h2>Ventes du jour : {total.toFixed(2)} DH</h2>
