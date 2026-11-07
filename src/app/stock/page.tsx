@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
+import { exigerRole } from "@/lib/session";
 import { ajusterStock } from "@/app/actions";
 
 export const dynamic = "force-dynamic";
 
 export default async function PageStock() {
+  await exigerRole("GERANT");
   const [ingredients, mouvements] = await Promise.all([
     db.ingredient.findMany({ orderBy: { nom: "asc" } }),
     db.mouvementStock.findMany({

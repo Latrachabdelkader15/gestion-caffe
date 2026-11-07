@@ -4,7 +4,13 @@ Application web pour gérer les serveurs, le bar et le stock d'un café.
 
 ## Fonctionnalités
 
-- **Serveurs** (`/serveur`) : choix du serveur et de la table, prise de commande depuis le menu, suivi de l'état, passage en « servie » puis encaissement.
+- **Connexion** (`/connexion`) : chaque employé touche son nom puis tape son mot de passe (clavier chiffré à l'écran pour les tablettes). Chacun ne voit que ses pages :
+  - serveur → Serveurs (seulement ses propres commandes) ;
+  - barman → Bar (son nom est enregistré quand il commence une commande) ;
+  - gérant → tout : Accueil, Serveurs, Bar, Stock, Tableau de bord, Employés.
+  Les mots de passe sont hachés (scrypt), jamais stockés en clair. Après 5 erreurs, le compte est bloqué 1 minute. La connexion dure 14 h (un service), bouton « Déconnexion » en haut.
+- **Employés** (`/employes`, gérant) : définir ou réinitialiser le mot de passe d'un employé, ajouter un employé, le désactiver. Changer le mot de passe ou désactiver déconnecte l'employé de ses appareils.
+- **Serveurs** (`/serveur`) : choix de la table, prise de commande depuis le menu, suivi de l'état, passage en « servie » puis encaissement.
 - **Bar** (`/bar`) : file des commandes en temps réel (rafraîchie toutes les 3 s), « Commencer » puis « Prête ».
 - **Stock** (`/stock`) : quantités par ingrédient, alertes de stock bas, entrées de marchandise et ajustements, historique des mouvements.
 - **Accueil** (`/`) : ventes encaissées du jour par serveur et alertes de stock.
@@ -24,7 +30,7 @@ npm run db:seed   # données de démonstration
 npm run dev
 ```
 
-Puis ouvrir http://localhost:3000.
+Puis ouvrir http://localhost:3000. Mots de passe de démonstration : Gérant `0000`, Youssef `1111`, Sara `2222`, Karim `3333` (à changer dans « Employés »).
 
 ## Installation sur l'ordinateur du café (serveur local)
 
@@ -38,6 +44,11 @@ Un ordinateur du café héberge l'application et la base. Les tablettes / télé
    npm run db:push
    npm run db:seed   # seulement pour des données d'essai
    ```
+   Sans données d'essai, créer le compte du gérant :
+   ```bash
+   npm run mot-de-passe -- "Nom du gérant" motdepasse
+   ```
+   Le gérant ajoute ensuite les serveurs et barmans dans « Employés ». La même commande sert si le gérant a oublié son mot de passe.
 3. Lancer le serveur (à chaque démarrage de l'ordinateur) :
    ```bash
    npm run serveur
@@ -47,6 +58,20 @@ Un ordinateur du café héberge l'application et la base. Les tablettes / télé
    - Donner une **IP fixe** à l'ordinateur dans la box (réservation DHCP), pour que l'adresse ne change pas.
    - Autoriser le **port 3000** dans le pare-feu de l'ordinateur (Windows le demande au premier lancement : cocher « Réseaux privés »).
    - Désactiver la mise en veille de l'ordinateur.
+
+### Mise à jour d'une installation existante (passage aux mots de passe)
+
+Les anciens codes PIN en clair sont supprimés. Après avoir récupéré la nouvelle version :
+
+```bash
+npm run db:sauvegarde
+npm install
+npx prisma db push --accept-data-loss   # supprime l'ancienne colonne « pin »
+npm run mot-de-passe -- "Nom du gérant" motdepasse
+npm run serveur
+```
+
+Puis, connecté en gérant, définir le mot de passe de chaque employé dans « Employés ».
 
 ### Sauvegarde de la base
 
@@ -64,7 +89,7 @@ Pour restaurer : arrêter le serveur, remplacer `prisma/cafe.db` par la sauvegar
 
 | Domaine | Tables |
 | --- | --- |
-| Personnel | `Employe` (nom, code PIN unique, rôle `SERVEUR` / `BARMAN` / `GERANT`, actif) |
+| Personnel | `Employe` (nom, mot de passe haché, rôle `SERVEUR` / `BARMAN` / `GERANT`, actif), `Session` (connexions ouvertes) |
 | Menu | `Produit`, `LigneRecette` (ingrédients consommés par produit) |
 | Commandes | `Commande` (table, serveur, barman, statut, date de paiement), `LigneCommande` |
 | Stock | `Ingredient` (quantité, seuil d'alerte, prix d'achat, fournisseur), `Fournisseur`, `Livraison` + `LigneLivraison` (bons de réception), `MouvementStock` (historique : vente, entrée, ajustement, annulation, perte) |
@@ -77,6 +102,5 @@ Next.js 15 (App Router, server actions), TypeScript, Prisma 6 avec SQLite.
 
 ## Prochaines étapes
 
-- Connexion par code PIN et droits selon le rôle (serveur, barman, gérant)
-- Gestion du menu, des recettes et des employés depuis l'interface
+- Gestion du menu et des recettes depuis l'interface
 - Interface en arabe

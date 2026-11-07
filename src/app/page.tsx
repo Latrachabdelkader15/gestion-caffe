@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { exigerRole } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function Accueil() {
+  await exigerRole("GERANT");
   const debutJour = new Date();
   debutJour.setHours(0, 0, 0, 0);
 
@@ -45,6 +47,10 @@ export default async function Accueil() {
         <Link href="/tableau-de-bord" className="carte">
           <h3>Tableau de bord</h3>
           <p className="muted">Ventes, serveurs, produits, stock</p>
+        </Link>
+        <Link href="/employes" className="carte">
+          <h3>Employés</h3>
+          <p className="muted">Mots de passe, ajout, désactivation</p>
         </Link>
       </div>
 
