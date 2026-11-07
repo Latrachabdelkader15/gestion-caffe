@@ -8,6 +8,7 @@ Application web pour gérer les serveurs, le bar et le stock d'un café.
 - **Bar** (`/bar`) : file des commandes en temps réel (rafraîchie toutes les 3 s), « Commencer » puis « Prête ».
 - **Stock** (`/stock`) : quantités par ingrédient, alertes de stock bas, entrées de marchandise et ajustements, historique des mouvements.
 - **Accueil** (`/`) : ventes encaissées du jour par serveur et alertes de stock.
+- **Tableau de bord** (`/tableau-de-bord`) : pour le gérant, sur la journée, 7 jours ou 30 jours : chiffre d'affaires, panier moyen, annulations, ventes par heure ou par jour, ventes par serveur, produits les plus vendus, commandes en cours et stock bas.
 
 Chaque produit a une recette (ingrédients consommés par unité). Le stock est déduit à la création de la commande et remis en place si elle est annulée.
 
