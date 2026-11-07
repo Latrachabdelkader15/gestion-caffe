@@ -35,6 +35,7 @@ export default async function PageStock() {
                   <select name="raison" defaultValue="ENTREE">
                     <option value="ENTREE">Entrée</option>
                     <option value="AJUSTEMENT">Ajustement</option>
+                    <option value="PERTE">Perte / casse</option>
                   </select>
                   <button>OK</button>
                 </form>

@@ -34,7 +34,7 @@ export async function creerCommande(serveurId: number, table: string, lignes: Li
     });
 
     for (const [ingredientId, qte] of await consommation(tx, valides)) {
-      await mouvement(tx, ingredientId, -qte, "VENTE", commande.id);
+      await mouvement(tx, ingredientId, -qte, "VENTE", { commandeId: commande.id, employeId: serveurId });
     }
     return commande.id;
   });
@@ -54,12 +54,15 @@ export async function changerStatut(commandeId: number, nouveau: Statut) {
     if (!TRANSITIONS[actuel].includes(nouveau)) {
       throw new Error(`Transition impossible : ${actuel} → ${nouveau}`);
     }
-    await tx.commande.update({ where: { id: commandeId }, data: { statut: nouveau } });
+    await tx.commande.update({
+      where: { id: commandeId },
+      data: { statut: nouveau, payeeLe: nouveau === "PAYEE" ? new Date() : undefined },
+    });
 
     // Annulation avant préparation : on remet le stock
     if (nouveau === "ANNULEE") {
       for (const [ingredientId, qte] of await consommation(tx, commande.lignes)) {
-        await mouvement(tx, ingredientId, qte, "ANNULATION", commandeId);
+        await mouvement(tx, ingredientId, qte, "ANNULATION", { commandeId });
       }
     }
   });
@@ -69,8 +72,10 @@ export async function changerStatut(commandeId: number, nouveau: Statut) {
 /** Entrée de marchandise ou ajustement d'inventaire. */
 export async function ajusterStock(formData: FormData) {
   const ingredientId = Number(formData.get("ingredientId"));
-  const delta = Number(formData.get("delta"));
-  const raison = formData.get("raison") === "AJUSTEMENT" ? "AJUSTEMENT" : "ENTREE";
+  const choix = formData.get("raison");
+  const raison = choix === "AJUSTEMENT" || choix === "PERTE" ? choix : "ENTREE";
+  const saisi = Number(formData.get("delta"));
+  const delta = raison === "PERTE" ? -Math.abs(saisi) : saisi;
   if (!ingredientId || !Number.isFinite(delta) || delta === 0) return;
   await db.$transaction((tx) => mouvement(tx, ingredientId, delta, raison));
   revalidatePath("/stock");
