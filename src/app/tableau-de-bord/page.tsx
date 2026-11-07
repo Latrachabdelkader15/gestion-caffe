@@ -83,7 +83,11 @@ export default async function TableauDeBord({
       const v = parProduit.get(pr.id) ?? { quantite: 0, ca: 0 };
       // Nombre d'unités réalisables : limité par l'ingrédient le plus juste
       const possibles = pr.recette.length
-        ? Math.max(0, Math.floor(Math.min(...pr.recette.map((r) => r.ingredient.quantite / r.quantite))))
+        ? Math.max(
+            0,
+            // + 1e-9 : évite qu'une erreur d'arrondi (1,9 / 0,1 = 18,999…) fasse perdre une unité
+            Math.floor(Math.min(...pr.recette.map((r) => r.ingredient.quantite / r.quantite)) + 1e-9),
+          )
         : null;
       const manque = pr.recette
         .filter((r) => r.ingredient.quantite <= r.ingredient.seuil)
