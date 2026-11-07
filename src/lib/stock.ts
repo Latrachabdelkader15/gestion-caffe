@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma, RaisonMouvement } from "@prisma/client";
 
 type Tx = Prisma.TransactionClient;
 
@@ -27,12 +27,44 @@ export async function mouvement(
   tx: Tx,
   ingredientId: number,
   delta: number,
-  raison: "VENTE" | "ENTREE" | "AJUSTEMENT" | "ANNULATION",
-  commandeId?: number,
+  raison: RaisonMouvement,
+  lien: { commandeId?: number; livraisonId?: number; employeId?: number; note?: string } = {},
 ) {
   await tx.ingredient.update({
     where: { id: ingredientId },
     data: { quantite: { increment: delta } },
   });
-  await tx.mouvementStock.create({ data: { ingredientId, delta, raison, commandeId } });
+  await tx.mouvementStock.create({ data: { ingredientId, delta, raison, ...lien } });
+}
+
+/** Réception d'une livraison : crée le bon et ajoute chaque ligne au stock. */
+export async function enregistrerLivraison(
+  tx: Tx,
+  donnees: {
+    fournisseurId?: number;
+    employeId?: number;
+    note?: string;
+    lignes: { ingredientId: number; quantite: number; prixUnit?: number }[];
+  },
+) {
+  const lignes = donnees.lignes.filter((l) => l.quantite > 0);
+  if (lignes.length === 0) throw new Error("Livraison vide");
+  const livraison = await tx.livraison.create({
+    data: {
+      fournisseurId: donnees.fournisseurId,
+      employeId: donnees.employeId,
+      note: donnees.note,
+      lignes: { create: lignes.map((l) => ({ ...l, prixUnit: l.prixUnit ?? 0 })) },
+    },
+  });
+  for (const l of lignes) {
+    await mouvement(tx, l.ingredientId, l.quantite, "ENTREE", {
+      livraisonId: livraison.id,
+      employeId: donnees.employeId,
+    });
+    if (l.prixUnit) {
+      await tx.ingredient.update({ where: { id: l.ingredientId }, data: { prixAchat: l.prixUnit } });
+    }
+  }
+  return livraison.id;
 }

@@ -5,7 +5,8 @@ import { creerCommande } from "@/app/actions";
 import { BoutonStatut } from "@/components/BoutonStatut";
 import { STATUTS, type Statut } from "@/lib/statuts";
 
-type Produit = { id: number; nom: string; categorie: string; prix: number };
+// disponible : nombre maximum d'unités réalisables avec le stock actuel (null = pas de recette)
+type Produit = { id: number; nom: string; categorie: string; prix: number; disponible: number | null };
 type Commande = {
   id: number;
   table: string;
@@ -38,18 +39,22 @@ export function PriseCommande({
 
   const lignes = produits.filter((p) => (panier[p.id] ?? 0) > 0);
   const total = lignes.reduce((s, p) => s + panier[p.id] * p.prix, 0);
+  // On ne peut pas ajouter plus que ce que le stock permet de préparer
+  const max = (id: number) => produits.find((p) => p.id === id)?.disponible ?? Infinity;
   const ajouter = (id: number, n: number) =>
-    setPanier((p) => ({ ...p, [id]: Math.max(0, (p[id] ?? 0) + n) }));
+    setPanier((p) => ({ ...p, [id]: Math.min(max(id), Math.max(0, (p[id] ?? 0) + n)) }));
+  const plein = (id: number) => (panier[id] ?? 0) >= max(id);
 
   const envoyer = () =>
     start(async () => {
       setErreur(null);
       try {
-        await creerCommande(
+        const res = await creerCommande(
           serveurId,
           table,
           Object.entries(panier).map(([produitId, quantite]) => ({ produitId: Number(produitId), quantite })),
         );
+        if (!res.ok) return setErreur(res.erreur);
         setPanier({});
         setTable("");
       } catch (e) {
@@ -92,9 +97,13 @@ export function PriseCommande({
 
           <div className="tuiles">
             {visibles.map((p) => (
-              <button key={p.id} className="tuile" onClick={() => ajouter(p.id, 1)}>
+              <button key={p.id} className="tuile" disabled={plein(p.id)} onClick={() => ajouter(p.id, 1)}>
                 {(panier[p.id] ?? 0) > 0 && <span className="pastille">{panier[p.id]}</span>}
                 <span className="tuile-nom">{p.nom}</span>
+                {p.disponible === 0 && <span className="alerte">Épuisé</span>}
+                {p.disponible !== null && p.disponible > 0 && p.disponible <= 5 && (
+                  <span className="alerte">Plus que {p.disponible}</span>
+                )}
                 <span className="tuile-prix">{p.prix.toFixed(2)} DH</span>
               </button>
             ))}
@@ -118,7 +127,7 @@ export function PriseCommande({
                 <span className="ligne">
                   <button className="rond secondaire" onClick={() => ajouter(p.id, -1)} aria-label="Retirer">−</button>
                   <strong style={{ minWidth: "1.5rem", textAlign: "center" }}>{panier[p.id]}</strong>
-                  <button className="rond" onClick={() => ajouter(p.id, 1)} aria-label="Ajouter">+</button>
+                  <button className="rond" disabled={plein(p.id)} onClick={() => ajouter(p.id, 1)} aria-label="Ajouter">+</button>
                 </span>
               </div>
             ))}

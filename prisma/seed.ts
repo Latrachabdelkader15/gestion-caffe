@@ -1,15 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { enregistrerLivraison } from "../src/lib/stock";
 
 const db = new PrismaClient();
 
 async function main() {
   await db.mouvementStock.deleteMany();
+  await db.ligneLivraison.deleteMany();
+  await db.livraison.deleteMany();
   await db.ligneCommande.deleteMany();
   await db.commande.deleteMany();
   await db.ligneRecette.deleteMany();
   await db.produit.deleteMany();
   await db.ingredient.deleteMany();
   await db.employe.deleteMany();
+  await db.fournisseur.deleteMany();
+
+  const torrefacteur = await db.fournisseur.create({ data: { nom: "Torréfaction Atlas", telephone: "0600000001" } });
+  const laiterie = await db.fournisseur.create({ data: { nom: "Laiterie du quartier", telephone: "0600000002" } });
+  const souk = await db.fournisseur.create({ data: { nom: "Marché de gros" } });
 
   await db.employe.createMany({
     data: [
@@ -20,16 +28,31 @@ async function main() {
     ],
   });
 
-  const ing = async (nom: string, unite: string, quantite: number, seuil: number) =>
-    db.ingredient.create({ data: { nom, unite, quantite, seuil } });
+  // Les ingrédients démarrent à 0 : le stock initial arrive par une livraison
+  const ing = async (nom: string, unite: string, seuil: number, prixAchat: number, fournisseurId: number) =>
+    db.ingredient.create({ data: { nom, unite, seuil, prixAchat, fournisseurId } });
 
-  const cafe = await ing("Café en grains", "g", 5000, 500);
-  const lait = await ing("Lait", "cl", 2000, 300);
-  const the = await ing("Thé vert", "g", 1000, 100);
-  const menthe = await ing("Menthe", "botte", 20, 3);
-  const sucre = await ing("Sucre", "g", 5000, 500);
-  const orange = await ing("Orange", "pièce", 60, 10);
-  const eau = await ing("Eau minérale 50cl", "bouteille", 48, 12);
+  const cafe = await ing("Café en grains", "g", 500, 0.15, torrefacteur.id);
+  const lait = await ing("Lait", "cl", 300, 0.07, laiterie.id);
+  const the = await ing("Thé vert", "g", 100, 0.1, souk.id);
+  const menthe = await ing("Menthe", "botte", 3, 3, souk.id);
+  const sucre = await ing("Sucre", "g", 500, 0.01, souk.id);
+  const orange = await ing("Orange", "pièce", 10, 1, souk.id);
+  const eau = await ing("Eau minérale 50cl", "bouteille", 12, 2.5, souk.id);
+
+  const gerant = await db.employe.findFirstOrThrow({ where: { role: "GERANT" } });
+  const livrer = (fournisseurId: number, lignes: [number, number][]) =>
+    db.$transaction((tx) =>
+      enregistrerLivraison(tx, {
+        fournisseurId,
+        employeId: gerant.id,
+        note: "Stock initial",
+        lignes: lignes.map(([ingredientId, quantite]) => ({ ingredientId, quantite })),
+      }),
+    );
+  await livrer(torrefacteur.id, [[cafe.id, 5000]]);
+  await livrer(laiterie.id, [[lait.id, 2000]]);
+  await livrer(souk.id, [[the.id, 1000], [menthe.id, 20], [sucre.id, 5000], [orange.id, 60], [eau.id, 48]]);
 
   const produit = async (
     nom: string,
